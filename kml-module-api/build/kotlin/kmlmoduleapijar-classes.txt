@@ -1,0 +1,1 @@
+/home/samuel/IdeaProjects/kml-parent/kml-module-api/build/classes/kotlin/main/InterfaceModuleDescription.class:/home/samuel/IdeaProjects/kml-parent/kml-module-api/build/classes/kotlin/main/Module.class
