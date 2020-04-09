@@ -16,5 +16,5 @@ interface ModuleAction<T> : ModuleContainerAction<T> {
         runModuleAction(this@ModuleAction)
     }
 
-    fun T.runModule()
+    suspend fun T.runModule()
 }
