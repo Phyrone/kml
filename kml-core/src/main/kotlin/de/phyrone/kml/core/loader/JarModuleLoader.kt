@@ -114,7 +114,7 @@ abstract class AbstractJarModuleLoader<T>(
     }
 }
 
-open class InitialiseModuleState<T>(formerStates: List<String>) : ModuleState<T> {
+open class InitialiseModuleStateClass<T>(formerStates: List<String>) : ModuleState<T> {
     override val name: String = STATE_NAME
     override val possibleFormerStates = formerStates
     override val order: Order = Order.ASCENDING
@@ -132,7 +132,7 @@ open class InitialiseModuleState<T>(formerStates: List<String>) : ModuleState<T>
     }
 }
 
-open class InstanceModuleState<T>(formerStates: List<String>) : ModuleState<T> {
+open class InstanceModuleStateClass<T>(formerStates: List<String>) : ModuleState<T> {
     override val name: String = STATE_NAME
     override val possibleFormerStates = formerStates
     override val order: Order = Order.ASCENDING
@@ -150,7 +150,7 @@ open class InstanceModuleState<T>(formerStates: List<String>) : ModuleState<T> {
     }
 }
 
-open class DestroyModuleState<T>(formerStates: List<String>) : ModuleState<T> {
+open class DestroyModuleStateClass<T>(formerStates: List<String>) : ModuleState<T> {
     override val name: String = STATE_NAME
     override val possibleFormerStates = formerStates
     override val order: Order = Order.DESCENDING
