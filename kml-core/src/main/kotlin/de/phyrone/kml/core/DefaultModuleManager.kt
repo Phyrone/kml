@@ -11,6 +11,7 @@ import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.lang.Exception
 import java.lang.IllegalStateException
+import java.lang.ref.SoftReference
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -27,7 +28,8 @@ class DefaultModuleManager<T>(config: ModuleLoaderConfig<T>) : ModuleManager<T> 
         logger.debug("Loaded modulestates: ${states.keys.joinToString(",")}")
     }
     private val modules = mutableMapOf<String, ModuleWrapper>()
-    private val statePathCache = HashMap<Pair<ModuleState<T>, ModuleState<T>>, Optional<List<ModuleState<T>>>>()
+    private val statePathCache =
+        HashMap<Pair<ModuleState<T>, ModuleState<T>>, SoftReference<Optional<List<ModuleState<T>>>>>()
 
     override fun get(name: String): ManagedModule<T>? = modules[name]
 
@@ -49,11 +51,12 @@ class DefaultModuleManager<T>(config: ModuleLoaderConfig<T>) : ModuleManager<T> 
 
     private suspend infix fun ModuleState<T>.pathTo(newModuleState: ModuleState<T>): List<ModuleState<T>> {
         val pair = Pair(this, newModuleState)
-        val cached = statePathCache[pair]
+        val cached = statePathCache[pair]?.get()
             ?: Optional.ofNullable(StatePathFindTask(this, newModuleState).findPath()).also {
-                statePathCache[pair] = it
+                statePathCache[pair] = SoftReference(it)
             }
-        if (cached.isEmpty)
+
+        if (cached.isPresent)
             throw IllegalStateException("no path found between ${this.name} and ${newModuleState.name}")
         else return cached.get()
     }
@@ -62,7 +65,7 @@ class DefaultModuleManager<T>(config: ModuleLoaderConfig<T>) : ModuleManager<T> 
     override suspend fun reloadDependencies() = coroutineScope {
         logger.debug("Start reloading dependencies...")
         modules.values.map { launch { it.clearDependencies() } }.forEach { it.join() }
-        modules.values.map { launch { it.buildDepedencies() } }.forEach { it.join() }
+        modules.values.map { launch { it.buildDependencies() } }.forEach { it.join() }
         logger.debug("Dependencies reloaded...")
     }
 
@@ -131,7 +134,7 @@ class DefaultModuleManager<T>(config: ModuleLoaderConfig<T>) : ModuleManager<T> 
     }
 
 
-    inner class ModuleWrapper(
+    private inner class ModuleWrapper(
         /* and yes a container in a container */
         override val container: ModuleContainer<T>
     ) : ManagedModule<T> {
@@ -148,18 +151,18 @@ class DefaultModuleManager<T>(config: ModuleLoaderConfig<T>) : ModuleManager<T> 
             actions.forEach { action ->
                 if (action.working(container)) {
                     with(action) {
-                        container.runAction()
+                        runAction()
                     }
                 }
             }
         }
 
         fun clearDependencies() {
-            dependsOnYou.clear()
-            youDependsOn.clear()
+            dependsOnYouWrappers.clear()
+            youDependsOnWrappers.clear()
         }
 
-        suspend fun buildDepedencies() {
+        suspend fun buildDependencies() {
             container.description.dependencies?.forEach { depString ->
                 firstTimeDepedencyBuilded = true
                 try {
@@ -210,13 +213,16 @@ class DefaultModuleManager<T>(config: ModuleLoaderConfig<T>) : ModuleManager<T> 
         private fun addDependency(wrapper: ModuleWrapper) {
             if (wrapper == this) return
             logger.debug("Module $name: add dependency ${wrapper.name}")
-            youDependsOn.add(wrapper)
-            wrapper.dependsOnYou.add(this)
+            youDependsOnWrappers.add(wrapper)
+            wrapper.dependsOnYouWrappers.add(this)
         }
 
-        val dependsOnYou = HashSet<ModuleWrapper>()
-        val youDependsOn = HashSet<ModuleWrapper>()
-
+        val dependsOnYouWrappers = HashSet<ModuleWrapper>()
+        val youDependsOnWrappers = HashSet<ModuleWrapper>()
+        override val dependencies: List<ManagedModule<T>>
+            get() = youDependsOnWrappers.toList()
+        override val dependsOnYou: List<ManagedModule<T>>
+            get() = dependsOnYou.toList()
 
         val stateUpdateListeners = mutableListOf<Mutex>()
         suspend fun awaitStateUpdate() {
@@ -249,11 +255,11 @@ class DefaultModuleManager<T>(config: ModuleLoaderConfig<T>) : ModuleManager<T> 
             when (targetState.order) {
                 Order.UNORDERED -> {
                 }
-                Order.ASCENDING -> youDependsOn.forEach {
+                Order.ASCENDING -> youDependsOnWrappers.forEach {
                     logger.debug("Module $name: await ${it.name} reached state ${targetState.name}")
                     it.awaitStateReached(targetState)
                 }
-                Order.DESCENDING -> dependsOnYou.forEach {
+                Order.DESCENDING -> dependsOnYouWrappers.forEach {
                     logger.debug("Module $name: await ${it.name} reached state ${targetState.name}")
                     it.awaitStateReached(targetState)
                 }

@@ -87,10 +87,10 @@ object TestDisabledState : ModuleState<TestModule> {
 
 class TestModule(override val name: String, override val dependencies: List<String>) :
     ModuleContainer<TestModule>,
-    InterfaceModuleDescription {
+    ModuleDescription {
     constructor(name: String, vararg dependencies: String) : this(name, dependencies.asList())
 
-    override val description: InterfaceModuleDescription = this
+    override val description: ModuleDescription = this
     override val website: String?
         get() = null
     override val authors: List<String>?
