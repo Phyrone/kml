@@ -1,10 +1,7 @@
 import de.phyrone.kml.core.DefaultModuleManager
 import de.phyrone.kml.core.ModuleContainer
 import de.phyrone.kml.core.ModuleLoaderConfig
-import de.phyrone.kml.core.lifecycle.Action
-import de.phyrone.kml.core.lifecycle.ModuleAction
-import de.phyrone.kml.core.lifecycle.ModuleState
-import de.phyrone.kml.core.lifecycle.Order
+import de.phyrone.kml.core.lifecycle.*
 import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -63,9 +60,9 @@ object TestEnabledState : ModuleState<TestModule> {
     override val order: Order = Order.ASCENDING
     override val actions: List<Action<TestModule>> = listOf(EAction())
 
-    class EAction : Action<TestModule> {
-        override suspend fun ModuleContainer<TestModule>.runAction() {
-            (this as TestModule).letWorkHavy(Duration.ofSeconds(2))
+    class EAction : ModuleContainerAction<TestModule> {
+        override suspend fun ModuleContainer<TestModule>.runModuleContainerAction() {
+            (this as TestModule).workHard(Duration.ofSeconds(2))
             println("Enable: ${description.name} {thread=${Thread.currentThread().name}}")
         }
     }
@@ -77,9 +74,9 @@ object TestDisabledState : ModuleState<TestModule> {
     override val order: Order = Order.DESCENDING
     override val actions: List<Action<TestModule>> = listOf(DAction())
 
-    class DAction : Action<TestModule> {
-        override suspend fun ModuleContainer<TestModule>.runAction() {
-            (this as TestModule).letWorkHavy(Duration.ofSeconds(1))
+    class DAction : ModuleContainerAction<TestModule> {
+        override suspend fun ModuleContainer<TestModule>.runModuleContainerAction() {
+            (this as TestModule).workHard(Duration.ofSeconds(1))
             println("Disable: ${description.name} {thread=${Thread.currentThread().name}}")
         }
     }
@@ -104,11 +101,15 @@ class TestModule(override val name: String, override val dependencies: List<Stri
         }
     }
 
-    fun letWorkHavy(duration: Duration) {
+    fun workHard(duration: Duration) {
         val endTime = System.currentTimeMillis() + duration.toMillis()
         while (System.currentTimeMillis() < endTime) {
             val res = Int.MAX_VALUE - Int.MAX_VALUE / 2
         }
 
+    }
+
+    override suspend fun destroy() {
+        //does nothing
     }
 }

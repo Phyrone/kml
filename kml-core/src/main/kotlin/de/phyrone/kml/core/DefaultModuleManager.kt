@@ -2,10 +2,7 @@ package de.phyrone.kml.core
 
 import de.phyrone.kml.core.lifecycle.ModuleState
 import de.phyrone.kml.core.lifecycle.Order
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
@@ -56,7 +53,7 @@ class DefaultModuleManager<T>(config: ModuleLoaderConfig<T>) : ModuleManager<T> 
                 statePathCache[pair] = SoftReference(it)
             }
 
-        if (cached.isPresent)
+        if (!cached.isPresent)
             throw IllegalStateException("no path found between ${this.name} and ${newModuleState.name}")
         else return cached.get()
     }
@@ -142,6 +139,8 @@ class DefaultModuleManager<T>(config: ModuleLoaderConfig<T>) : ModuleManager<T> 
         var firstTimeDepedencyBuilded = false
 
         val stateLock = Mutex()
+
+        @Volatile
         var currentStateField: ModuleState<T> = firstState
         suspend fun getcurrentState() = stateLock.withLock { currentStateField }
         suspend fun setCurrentState(newModuleState: ModuleState<T>) =
@@ -224,22 +223,13 @@ class DefaultModuleManager<T>(config: ModuleLoaderConfig<T>) : ModuleManager<T> 
         override val dependsOnYou: List<ManagedModule<T>>
             get() = dependsOnYou.toList()
 
-        val stateUpdateListeners = mutableListOf<Mutex>()
-        suspend fun awaitStateUpdate() {
-            val listener = Mutex(true)
-            stateUpdateListeners.add(listener)
-            listener.lock()
-            stateUpdateListeners.remove(listener)
-        }
-
         private val setStateLock = Mutex()
 
 
         suspend fun awaitStateReached(targetState: ModuleState<T>) {
             while (!(getcurrentState() reached targetState)) {
-                //TODO("repair event")
-                //awaitStateUpdate()
-                delay(10)
+                //TODO("await event")
+                delay(100)
             }
 
         }
@@ -248,19 +238,23 @@ class DefaultModuleManager<T>(config: ModuleLoaderConfig<T>) : ModuleManager<T> 
             targetState.jumpIn()
             logger.debug("Module $name: change state to $targetState")
             setCurrentState(targetState)
-            stateUpdateListeners.forEach { it.unlock() }
+            notifyStateUpdate()
         }
+        fun notifyStateUpdate(){
+            //TODO("implement something")
+        }
+
 
         private suspend fun iSetStateOrdered(targetState: ModuleState<T>) {
             when (targetState.order) {
                 Order.UNORDERED -> {
                 }
                 Order.ASCENDING -> youDependsOnWrappers.forEach {
-                    logger.debug("Module $name: await ${it.name} reached state ${targetState.name}")
+                    logger.debug("Module $name: wait util ${it.name} reached state ${targetState.name}")
                     it.awaitStateReached(targetState)
                 }
                 Order.DESCENDING -> dependsOnYouWrappers.forEach {
-                    logger.debug("Module $name: await ${it.name} reached state ${targetState.name}")
+                    logger.debug("Module $name: wait util ${it.name} reached state ${targetState.name}")
                     it.awaitStateReached(targetState)
                 }
             }
