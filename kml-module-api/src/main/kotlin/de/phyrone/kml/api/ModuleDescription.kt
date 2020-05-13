@@ -1,3 +1,4 @@
+package de.phyrone.kml.api
 interface ModuleDescription {
     val name: String
     val website: String?
