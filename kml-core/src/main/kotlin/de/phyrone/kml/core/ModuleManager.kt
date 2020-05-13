@@ -1,6 +1,7 @@
 package de.phyrone.kml.core
 
-import ModuleDescription
+
+import de.phyrone.kml.api.ModuleDescription
 import de.phyrone.kml.core.lifecycle.ModuleAction
 import de.phyrone.kml.core.lifecycle.ModuleState
 

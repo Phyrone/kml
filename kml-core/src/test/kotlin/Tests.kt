@@ -1,3 +1,4 @@
+import de.phyrone.kml.api.ModuleDescription
 import de.phyrone.kml.core.DefaultModuleManager
 import de.phyrone.kml.core.ModuleContainer
 import de.phyrone.kml.core.ModuleLoaderConfig

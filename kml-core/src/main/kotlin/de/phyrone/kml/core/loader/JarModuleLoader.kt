@@ -1,7 +1,7 @@
 package de.phyrone.kml.core.loader
 
-import JarModuleDescription
-import ModuleDescription
+import de.phyrone.kml.api.JarModuleDescription
+import de.phyrone.kml.api.ModuleDescription
 import de.phyrone.kml.core.ModuleContainer
 import de.phyrone.kml.core.ModuleManager
 import de.phyrone.kml.core.lifecycle.*
