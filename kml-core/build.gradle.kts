@@ -20,7 +20,7 @@ dependencies {
     testCompile("org.slf4j", "slf4j-simple", slf4jVersion)
     implementation(project(":kml-module-api"))
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.9")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.1")
 }
 
 configure<JavaPluginConvention> {
